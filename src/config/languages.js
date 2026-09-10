@@ -47,15 +47,18 @@ function detectLanguage(text) {
 }
 
 function buildLanguageSections() {
-  const group1 = LANGUAGES.slice(0, 6);
-  const group2 = LANGUAGES.slice(6);
+  // WhatsApp hard limit: max 10 rows total across all sections
+  // Keeping top 10 most common Indian languages
+  const TOP_LANGS = LANGUAGES.filter(l => ['en','hi','kn','ta','te','mr','gu','bn','ml','pa'].includes(l.code));
+  const group1 = TOP_LANGS.slice(0, 5);
+  const group2 = TOP_LANGS.slice(5);
   return [
     {
       title: 'Select Language',
       rows: group1.map((l) => ({ id: `lang_${l.code}`, title: l.nativeLabel, description: l.label })),
     },
     {
-      title: 'भाषा / மொழி / ভাষা',
+      title: 'ಭಾಷೆ / மொழி / భాష',
       rows: group2.map((l) => ({ id: `lang_${l.code}`, title: l.nativeLabel, description: l.label })),
     },
   ];
