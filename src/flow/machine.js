@@ -275,22 +275,12 @@ async function handleMessage(inbound) {
       if (detected) {
         session.lang = detected;
         c = getCopy(detected);
+        await advance(session, { lang: detected }, STATES.MAIN_MENU);
+        return sendMainMenu(waId, c);
       }
-      await advance(session, { lang: session.lang }, STATES.MAIN_MENU);
-
-      // Send general SkyUp brochure to every new user before the menu.
-      // Non-fatal — menu still loads even if PDF send fails.
-      const brochureUrl = getGeneralBrochure();
-      if (brochureUrl) {
-        try {
-          await sendDocument(waId, brochureUrl, 'SkyUp_Digital_Solutions.pdf', c.generalBrochureCaption);
-          console.log('[first-contact] general brochure sent to', waId);
-        } catch (err) {
-          console.error('[first-contact] brochure send failed:', err.message);
-        }
-      }
-
-      return sendMainMenu(waId, c);
+      // No language detected → show language picker
+      await advance(session, { lang: 'en' }, STATES.LANG_PICKER_SENT);
+      return sendLangPicker(waId, c);
     }
 
     // ── 2. Language picker ───────────────────────────────────────────
@@ -577,7 +567,6 @@ async function startQuotationFlow(session, c) {
   const questions = (svc && svc.requirementQuestions) || [];
 
   // Send quotation intro
-  await sendText(waId => waId, session.waId); // placeholder
   await sendText(session.waId, c.quotationIntro);
 
   if (questions.length > 0) {
