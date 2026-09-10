@@ -85,7 +85,7 @@ async function sendServiceIntro(waId, service, c, categoryId) {
   //    Non-fatal if env var not set or URL broken.
   const catId  = categoryId || service._categoryId;
   const pdfUrl = getPortfolioPdf(catId);
-  if (pdfUrl) {
+  if (pdfUrl && pdfUrl.startsWith('http')) {
     try {
       const filename = getPortfolioFilename(catId);
       await sendDocument(waId, pdfUrl, filename, c.pdfCaption(service.title));
@@ -260,10 +260,11 @@ async function handleMessage(inbound) {
   }
 
   // ── Global reset ─────────────────────────────────────────────────
-  if (kind === 'text' && isReset(text)) {
+  // Skip reset for IDLE — new users must see language picker first!
+  if (kind === 'text' && isReset(text) && session.state !== STATES.IDLE) {
     resetSession(session);
     await session.save();
-    return sendMainMenu(waId, c);
+    return sendLangPicker(waId, c);
   }
 
   // ── State machine ────────────────────────────────────────────────
@@ -563,6 +564,13 @@ async function handleMessage(inbound) {
 // ──────────────────────────────────────────────────────────────────
 
 async function startQuotationFlow(session, c) {
+  // Collect name first if not already collected
+  if (!session.name) {
+    session.quotationRequested = true;
+    await advance(session, {}, STATES.QUOTATION_PENDING);
+    return sendText(session.waId, c.quotationAskReq || 'Please describe your requirement briefly.');
+  }
+
   const svc = findServiceById(session.serviceId);
   const questions = (svc && svc.requirementQuestions) || [];
 
@@ -577,7 +585,7 @@ async function startQuotationFlow(session, c) {
 
   // No predefined questions — ask for requirement freeform
   await advance(session, {}, STATES.QUOTATION_PENDING);
-  return sendText(session.waId, c.quotationAskReq);
+  return sendText(session.waId, c.quotationAskReq || 'Please describe your requirement.');
 }
 
 async function startDemoFlow(session, c) {
